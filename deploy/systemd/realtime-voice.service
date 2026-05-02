@@ -1,0 +1,19 @@
+[Unit]
+Description=Realtime Twilio Voice bridge (OpenAI/Azure Realtime)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dev
+WorkingDirectory=/home/dev/realtime-phonecalls
+EnvironmentFile=/etc/realtime-voice.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+
+# Hardening: no new privileges
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

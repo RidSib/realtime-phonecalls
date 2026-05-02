@@ -69,66 +69,41 @@ for Azure URL and `api-key` auth (used by this app).
 
 ### Next to OpenClaw (Clawless)
 
-OpenClaw stays **as-is** (Docker gateway on port **18789**). The voice bridge is a
-**second service** on the same VM: same Azure subscription, shared nothing at
-runtime except you may reuse the **same Azure OpenAI resource** and keys
-(point `AZURE_*` in this app’s env at your Realtime deployment).
+OpenClaw stays **as-is** (gateway on **18789**). The voice bridge is a **second
+process** on the same VM; you can reuse the **same Azure OpenAI** Realtime
+deployment keys in **`AZURE_*`** env vars.
 
-SSH to the VM (`ssh dev@<ip>` from Clawless Terraform output). **Node 20** is
-already installed by Clawless `cloud-init`. Plan an **NSG / firewall** rule for
-**HTTPS** (usually **443**): default Clawless rules often allow **22** and
-**18789** only; Twilio must reach **HTTPS + WSS** on your public URL.
+**Prerequisites:** SSH as `dev`, Node 20 (Clawless `cloud-init` installs it).
+Twilio needs a **public HTTPS URL** for `/voice` and **WSS** for `/media`.
+Default Clawless Azure NSG often allows only **22** and **18789** — add **443**
+(or use **Cloudflare Tunnel / ngrok** on the VM so you do not open inbound
+ports).
 
-1. Clone or update this repo on the VM and build:
+### Install on the VM (automated)
 
-   ```bash
-   git clone https://github.com/RidSib/realtime-phonecalls.git
-   cd realtime-phonecalls
-   npm ci
-   npm run build
-   ```
+```bash
+git clone https://github.com/RidSib/realtime-phonecalls.git
+cd realtime-phonecalls
+sudo ./scripts/install-on-vm.sh
+```
 
-   (Updates: `git pull` in that directory, then `npm ci && npm run build`.)
+This clones or pulls under **`/home/dev/realtime-phonecalls`**, runs
+**`npm ci && npm run build`**, installs **`deploy/systemd/realtime-voice.service`**,
+and seeds **`/etc/realtime-voice.env`** from **`.env.example`** if missing.
 
-2. Put secrets in a file **outside** git, e.g. `/etc/realtime-voice.env`:
+1. **Edit secrets:** `sudo nano /etc/realtime-voice.env` — set **`PUBLIC_URL`**
+   (`https://…`, no trailing slash), **`TWILIO_AUTH_TOKEN`**, and OpenAI or Azure
+   Realtime vars (see **Environment**).
 
-   ```bash
-   PUBLIC_URL=https://voice.example.com
-   REALTIME_PROVIDER=azure
-   AZURE_OPENAI_ENDPOINT=https://...
-   AZURE_OPENAI_API_KEY=...
-   AZURE_OPENAI_DEPLOYMENT_NAME=...
-   TWILIO_AUTH_TOKEN=...
-   PORT=5050
-   ```
+2. **TLS** in front of **`127.0.0.1:5050`** — Caddy/nginx + Let’s Encrypt, or a
+   tunnel; **`PUBLIC_URL`** must match what Twilio uses.
 
-3. Run behind **TLS** (Caddy or nginx with Let’s Encrypt) so `PUBLIC_URL` is
-   `https://` and `wss://` works. Open the firewall / NSG for 443 (and proxy to
-   `127.0.0.1:5050`).
+3. **Start:** `sudo systemctl enable --now realtime-voice` (or
+   **`sudo ./scripts/install-on-vm.sh --start`** once env is valid.)
 
-4. **systemd** example (`/etc/systemd/system/realtime-voice.service`):
+4. **Twilio:** Voice webhook **POST** **`https://<public-host>/voice`**.
 
-   ```ini
-   [Unit]
-   Description=Realtime Twilio Voice bridge
-   After=network.target
-
-   [Service]
-   Type=simple
-   WorkingDirectory=/home/dev/realtime-phonecalls
-   EnvironmentFile=/etc/realtime-voice.env
-   ExecStart=/usr/bin/node dist/index.js
-   Restart=always
-   User=dev
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-   Then: `sudo systemctl daemon-reload`, `sudo systemctl enable --now
-   realtime-voice`.
-
-5. Point your Twilio voice webhook at `https://your-domain/voice`.
+5. **Updates:** `cd ~/realtime-phonecalls && git pull && npm ci && npm run build && sudo systemctl restart realtime-voice`
 
 ## Endpoints
 
@@ -151,3 +126,4 @@ assistant item id and audio duration are known.
 - `npm run dev` — watch mode with `tsx`
 - `npm run build` — compile to `dist/`
 - `npm start` — run `node dist/index.js`
+- `scripts/install-on-vm.sh` — clone/pull, build, systemd on Ubuntu (Clawless VM)
