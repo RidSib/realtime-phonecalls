@@ -1,4 +1,12 @@
-import { mulaw } from "alawmulaw";
+import codecs from "alawmulaw";
+
+type Mulaw = {
+  decode(d: Uint8Array): Int16Array;
+  encode(pcm: Int16Array): Uint8Array;
+};
+
+/** CJS bundle exposes { mulaw } on default; named ESM import breaks. */
+const { mulaw } = codecs as { mulaw: Mulaw };
 
 /** Twilio Media Streams: 8 kHz mu-law; Realtime pcm16 is typically 24 kHz. */
 export const TWILIO_HZ = 8000;
