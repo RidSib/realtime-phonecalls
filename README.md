@@ -67,13 +67,28 @@ for Azure URL and `api-key` auth (used by this app).
 
 ## Production (e.g. Clawless Azure VM)
 
-1. `git clone` or `git pull` this repo on the VM and build:
+### Next to OpenClaw (Clawless)
+
+OpenClaw stays **as-is** (Docker gateway on port **18789**). The voice bridge is a
+**second service** on the same VM: same Azure subscription, shared nothing at
+runtime except you may reuse the **same Azure OpenAI resource** and keys
+(point `AZURE_*` in this app’s env at your Realtime deployment).
+
+SSH to the VM (`ssh dev@<ip>` from Clawless Terraform output). **Node 20** is
+already installed by Clawless `cloud-init`. Plan an **NSG / firewall** rule for
+**HTTPS** (usually **443**): default Clawless rules often allow **22** and
+**18789** only; Twilio must reach **HTTPS + WSS** on your public URL.
+
+1. Clone or update this repo on the VM and build:
 
    ```bash
-   cd ~/realtime_voice_twilio
+   git clone https://github.com/RidSib/realtime-phonecalls.git
+   cd realtime-phonecalls
    npm ci
    npm run build
    ```
+
+   (Updates: `git pull` in that directory, then `npm ci && npm run build`.)
 
 2. Put secrets in a file **outside** git, e.g. `/etc/realtime-voice.env`:
 
@@ -100,11 +115,11 @@ for Azure URL and `api-key` auth (used by this app).
 
    [Service]
    Type=simple
-   WorkingDirectory=/home/you/realtime_voice_twilio
+   WorkingDirectory=/home/dev/realtime-phonecalls
    EnvironmentFile=/etc/realtime-voice.env
    ExecStart=/usr/bin/node dist/index.js
    Restart=always
-   User=you
+   User=dev
 
    [Install]
    WantedBy=multi-user.target
