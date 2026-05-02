@@ -27,6 +27,8 @@ export class CallBridge {
   private assistantItemId: string | null = null;
   private assistantAudioMs = 0;
   private activeResponseId: string | null = null;
+  /** Fallback when created-event shape differs (e.g. Azure); updated on deltas */
+  private lastResponseId: string | null = null;
   private destroyed = false;
 
   constructor(twilioWs: WebSocket, cfg: AppConfig) {
@@ -119,12 +121,20 @@ export class CallBridge {
     }
 
     if (t === "response.created") {
-      const r = msg.response as { id?: string } | undefined;
-      if (r?.id) this.activeResponseId = r.id;
+      const resp = msg.response as Record<string, unknown> | undefined;
+      const top = msg.response_id as string | undefined;
+      let id: string | undefined;
+      if (typeof top === "string" && top.length > 0) id = top;
+      else if (resp && typeof resp.id === "string") id = resp.id;
+      if (id) {
+        this.activeResponseId = id;
+        this.lastResponseId = id;
+      }
     }
 
     if (t === "response.done") {
       this.activeResponseId = null;
+      this.lastResponseId = null;
     }
 
     if (t === "response.output_item.added") {
@@ -146,6 +156,11 @@ export class CallBridge {
     const isAudioDelta =
       t === "response.output_audio.delta" || t === "response.audio.delta";
     if (isAudioDelta) {
+      const rid = msg.response_id as string | undefined;
+      if (rid) {
+        this.lastResponseId = rid;
+        if (!this.activeResponseId) this.activeResponseId = rid;
+      }
       const itemId = msg.item_id as string | undefined;
       if (itemId) this.assistantItemId = itemId;
       const b64 = msg.delta as string | undefined;
@@ -177,15 +192,21 @@ export class CallBridge {
   }
 
   /**
-   * Fires on every caller speech segment (VAD). Only cancel/clear when an
-   * assistant response is actually in progress — otherwise the API returns
+   * VAD fires for each caller speech segment. Interruption only when the model
+   * is / was actually speaking: we have a response id and/or we already sent
+   * assistant audio to Twilio. Skipping idle speech avoids
    * response_cancel_not_active.
    */
   private handleSpeechStarted(): void {
     if (!this.streamSid || !this.rt || this.rt.readyState !== WebSocket.OPEN) {
       return;
     }
-    if (!this.activeResponseId) {
+
+    const cancelId = this.activeResponseId ?? this.lastResponseId;
+    const assistantWasAudible =
+      this.assistantAudioMs > 0 || Boolean(cancelId);
+
+    if (!assistantWasAudible) {
       return;
     }
 
@@ -195,12 +216,16 @@ export class CallBridge {
       );
     }
 
-    this.rt.send(
-      JSON.stringify({
-        type: "response.cancel",
-        response_id: this.activeResponseId,
-      }),
-    );
+    if (cancelId) {
+      this.rt.send(
+        JSON.stringify({
+          type: "response.cancel",
+          response_id: cancelId,
+        }),
+      );
+    } else if (this.assistantAudioMs > 0) {
+      this.rt.send(JSON.stringify({ type: "response.cancel" }));
+    }
 
     if (this.assistantItemId && this.assistantAudioMs > 0) {
       const endMs = Math.max(0, Math.floor(this.assistantAudioMs));
