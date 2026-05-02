@@ -1,5 +1,9 @@
 # OpenAI Realtime + Twilio Voice bridge
 
+**Status:** working prototype — end-to-end PSTN calls verified with Twilio + tunnel
++ Azure OpenAI Realtime (`gpt-realtime` deployment). Harden for production
+(TLS on VM, key rotation, interrupt tuning).
+
 Public repo: [github.com/RidSib/realtime-phonecalls](https://github.com/RidSib/realtime-phonecalls).
 
 Node.js service that connects **Twilio Media Streams** (phone audio) to the
