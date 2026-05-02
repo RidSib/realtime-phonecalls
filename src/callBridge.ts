@@ -176,22 +176,31 @@ export class CallBridge {
     }
   }
 
+  /**
+   * Fires on every caller speech segment (VAD). Only cancel/clear when an
+   * assistant response is actually in progress — otherwise the API returns
+   * response_cancel_not_active.
+   */
   private handleSpeechStarted(): void {
     if (!this.streamSid || !this.rt || this.rt.readyState !== WebSocket.OPEN) {
       return;
     }
+    if (!this.activeResponseId) {
+      return;
+    }
+
     if (this.twilioWs.readyState === WebSocket.OPEN) {
       this.twilioWs.send(
         JSON.stringify({ event: "clear", streamSid: this.streamSid }),
       );
     }
-    const cancelPayload: Record<string, string> = {
-      type: "response.cancel",
-    };
-    if (this.activeResponseId) {
-      cancelPayload.response_id = this.activeResponseId;
-    }
-    this.rt.send(JSON.stringify(cancelPayload));
+
+    this.rt.send(
+      JSON.stringify({
+        type: "response.cancel",
+        response_id: this.activeResponseId,
+      }),
+    );
 
     if (this.assistantItemId && this.assistantAudioMs > 0) {
       const endMs = Math.max(0, Math.floor(this.assistantAudioMs));
