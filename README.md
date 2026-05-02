@@ -81,6 +81,12 @@ ports).
 
 ### Install on the VM (automated)
 
+**Clawless:** set **`twilio_auth_token`**, **`realtime_public_url`**, and related keys in
+**`terraform.tfvars`** — cloud-init can clone this repo, write **`/etc/realtime-voice.env`**,
+and enable **`realtime-voice`** (see **Clawless** README *Twilio voice bridge*).
+
+**Any Ubuntu VM:** clone and run the installer:
+
 ```bash
 git clone https://github.com/RidSib/realtime-phonecalls.git
 cd realtime-phonecalls
