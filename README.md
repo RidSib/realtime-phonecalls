@@ -1,5 +1,7 @@
 # OpenAI Realtime + Twilio Voice bridge
 
+Public repo: [github.com/RidSib/realtime-phonecalls](https://github.com/RidSib/realtime-phonecalls).
+
 Node.js service that connects **Twilio Media Streams** (phone audio) to the
 **OpenAI Realtime API** or **Azure OpenAI Realtime** over WebSockets. No SIP.
 

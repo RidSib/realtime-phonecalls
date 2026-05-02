@@ -1,7 +1,11 @@
 {
-  "name": "realtime-voice-twilio",
+  "name": "realtime-phonecalls",
   "version": "0.1.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RidSib/realtime-phonecalls.git"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc",
