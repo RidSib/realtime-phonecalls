@@ -86,7 +86,10 @@ export class CallBridge {
             },
           },
           output: {
-            format: { type: "audio/pcm" },
+            format: {
+              type: "audio/pcm",
+              rate: REALTIME_HZ,
+            },
             voice: this.cfg.voice,
           },
         },
