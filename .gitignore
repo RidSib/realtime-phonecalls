@@ -1,5 +1,10 @@
 node_modules/
 dist/
+
+# Secrets — keep `.env.example` in git for documentation only.
 .env
+.env.local
+.env.*.local
+
 *.log
 .DS_Store
